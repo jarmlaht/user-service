@@ -25,4 +25,10 @@ public record UserPrincipal(Long id,
     public String getPassword() {
         return password;
     }
+
+    // Exclude the password hash, which the generated record toString() would otherwise expose in logs
+    @Override
+    public String toString() {
+        return "UserPrincipal[id=" + id + ", username=" + username + ", name=" + name + "]";
+    }
 }

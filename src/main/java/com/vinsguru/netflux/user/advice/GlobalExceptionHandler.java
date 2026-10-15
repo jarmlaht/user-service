@@ -1,9 +1,12 @@
 package com.vinsguru.netflux.user.advice;
 
 import com.vinsguru.netflux.user.exceptions.UsernameAlreadyExistsException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -15,6 +18,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private static final String INVALID_CREDENTIALS = "Invalid username or password";
     private static final String INVALID_USER_ID_HEADER = "Missing or invalid X-User-Id header";
@@ -29,6 +34,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuthentication(AuthenticationException ex) {
         return unauthorized(INVALID_CREDENTIALS);
+    }
+
+    // Wraps infrastructure failures (e.g. database unavailable) during authentication; not a credentials problem
+    @ExceptionHandler(InternalAuthenticationServiceException.class)
+    public ProblemDetail handleInternalAuthentication(InternalAuthenticationServiceException ex) {
+        log.error("Authentication failed due to an internal error", ex);
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        problem.setTitle("Internal Server Error");
+        return problem;
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)
